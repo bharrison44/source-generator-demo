@@ -1,0 +1,31 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+	<PropertyGroup>
+		<TargetFramework>net6.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!--Required for generator to access the file-->
+		<Content Remove="api.json" />
+		<AdditionalFiles Include="api.json" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Swashbuckle.AspNetCore" Version="6.2.3" />
+	</ItemGroup>
+	
+	<ItemGroup>
+	  <Folder Include="Controllers\" />
+	</ItemGroup>
+	
+	<ItemGroup>
+		<!--Including generator library as project reference. Add normally, add OutputItemType and ReferenceOutputAssembly attributes.-->
+		<ProjectReference Include="..\ApiGenerator\ApiGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+
+		<!--Including generator library as nuget package. Added normally via package manager.-->
+		<!--<PackageReference Include="ApiGenerator" Version="0.1.0" />-->
+	</ItemGroup>
+
+</Project>

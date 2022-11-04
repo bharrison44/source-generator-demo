@@ -1,0 +1,43 @@
+[
+  {
+    "name": "Account",
+    "props": [
+      {
+        "name": "Id",
+        "type": "long",
+        "key": true
+      },
+      {
+        "name": "Name",
+        "type": "string"
+      },
+      {
+        "name": "Enabled",
+        "type": "bool"
+      }
+    ]
+  },
+  {
+    "name": "Person",
+    "props": [
+      {
+        "name": "Id",
+        "type": "long",
+        "key": true
+      },
+      {
+        "name": "Partition",
+        "type": "System.Guid",
+        "key": true
+      },
+      {
+        "name": "FirstName",
+        "type": "string"
+      },
+      {
+        "name": "LastName",
+        "type": "string"
+      }
+    ]
+  }
+]

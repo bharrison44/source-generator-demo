@@ -2,7 +2,6 @@
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 using System.Text;
-using System.Collections.Immutable;
 
 #if DEBUGGEN
 using System.Diagnostics;
@@ -10,17 +9,24 @@ using System.Diagnostics;
 
 namespace MapperGenerator;
 
+/// <summary>
+/// A source generator which generates extention methods for mapping one data object to another.
+/// </summary>
 [Generator]
 public class MapperGenerator : ISourceGenerator
 {
+    /// <inheritdoc />
     public void Initialize(GeneratorInitializationContext context)
     {
 #if DEBUGGEN
+        // Attach debugger when using dedicated debugging configuration. Should not be used within VS.
         if (!Debugger.IsAttached) { Debugger.Launch(); }
 #endif
+
         context.RegisterForSyntaxNotifications(() => new MappingReceiver());
     }
 
+    /// <inheritdoc />
     public void Execute(GeneratorExecutionContext context)
     {
         var syntaxReciever = context.SyntaxReceiver as MappingReceiver;
@@ -30,18 +36,20 @@ public class MapperGenerator : ISourceGenerator
 
         var builder = new StringBuilder();
 
-        builder.AppendLine("namespace GeneratedNS");
+        // Generate the mappings registration function.
+        builder.AppendLine("namespace MapperGenerator");
         builder.AppendLine("{");
-        builder.AppendLine("    public static class SimpleMapper");
+        builder.AppendLine("    public static class Mappings");
         builder.AppendLine("    {");
         builder.AppendLine("        public static void Register<TIn, TOut>() where TOut : new() { }");
         builder.AppendLine("    }");
         builder.AppendLine("}");
         builder.AppendLine();
 
-        if (syntaxReciever.Calls.Any())
+        if (syntaxReciever.Registrations.Any())
         {
-            IEnumerable<IGrouping<string, MapDetails>> groupedDetails = GetMapDetails(context, syntaxReciever.Calls).GroupBy(dets => dets.InTypeNamespace);
+            // Collect details needed from calls to Mappings.Register
+            IEnumerable<IGrouping<string, MapDetails>> groupedDetails = GetMapDetails(context, syntaxReciever.Registrations).GroupBy(dets => dets.InTypeNamespace);
 
             foreach (IGrouping<string, MapDetails> detailsByNamespace in groupedDetails)
             {
@@ -55,20 +63,8 @@ public class MapperGenerator : ISourceGenerator
 
                 foreach (MapDetails details in detailsByNamespace)
                 {
-                    builder.AppendLine($"        public static {details.OutTypeName} MapTo{details.OutTypeDisplay}(this {details.InTypeName} value, System.Action<{details.InTypeName}, {details.OutTypeName}>? additionalMappings = null)");
-                    builder.AppendLine($"        {{");
-                    builder.AppendLine($"           {details.OutTypeName} mapped = new {details.OutTypeName}();");
-
-                    foreach ((string inMember, string outMember) in details.MappableProperties)
-                    {
-                        builder.AppendLine($"           mapped.{outMember} = value.{inMember};");
-                    }
-
-                    builder.AppendLine($"           additionalMappings?.Invoke(value, mapped);");
-
-                    builder.AppendLine($"           return mapped;");
-                    builder.AppendLine($"        }}");
-                    builder.AppendLine();
+                    // Generate mapping extension methods in same namespace as the type being extended.
+                    GenerateMappingMethod(builder, details);
                 }
 
                 builder.AppendLine($"    }}");
@@ -81,16 +77,37 @@ public class MapperGenerator : ISourceGenerator
 
         string generatedText = builder.ToString();
 
-        SourceText sourceText = SourceText.From(generatedText, Encoding.UTF8);
-        context.AddSource($"GeneratedClass.cs", sourceText);
+        context.AddSource($"GeneratedClass.cs", SourceText.From(generatedText, Encoding.UTF8));
+    }
+
+    private void GenerateMappingMethod(StringBuilder builder, MapDetails details)
+    {
+        builder.AppendLine($"        public static {details.OutTypeName} MapTo{details.OutTypeDisplay}(this {details.InTypeName} value, System.Action<{details.InTypeName}, {details.OutTypeName}>? additionalMappings = null)");
+        builder.AppendLine($"        {{");
+        builder.AppendLine($"           {details.OutTypeName} mapped = new {details.OutTypeName}();");
+
+        foreach ((string inMember, string outMember) in details.MappableProperties)
+        {
+            builder.AppendLine($"           mapped.{outMember} = value.{inMember};");
+        }
+
+        builder.AppendLine($"           additionalMappings?.Invoke(value, mapped);");
+
+        builder.AppendLine($"           return mapped;");
+        builder.AppendLine($"        }}");
+        builder.AppendLine();
     }
 
     private IEnumerable<MapDetails> GetMapDetails(GeneratorExecutionContext context, IEnumerable<(TypeSyntax InTypeSyntax, TypeSyntax OutTypeSyntax)> mappedTypeSyntax)
     {
+        SemanticModel? semanticModel = null;
+
         foreach ((TypeSyntax inTypeSyntax, TypeSyntax outTypeSyntax) in mappedTypeSyntax)
         { 
-            SemanticModel semanticModel = context.Compilation.GetSemanticModel(inTypeSyntax.SyntaxTree);
+            // Semantic model only needs to be retrieved once. All syntax objects have the same syntax tree.
+            semanticModel ??= context.Compilation.GetSemanticModel(inTypeSyntax.SyntaxTree);
 
+            // Use the in and out type syntax to get symbol information.
             SymbolInfo inTypeSymbolInfo = semanticModel.GetSymbolInfo(inTypeSyntax);
             SymbolInfo outTypeSymbolInfo = semanticModel.GetSymbolInfo(outTypeSyntax);
 
@@ -100,14 +117,18 @@ public class MapperGenerator : ISourceGenerator
             if (outTypeSymbolInfo.Symbol is null || outTypeSymbolInfo.Symbol is not INamedTypeSymbol outTypeSymbol)
                 throw new Exception("Invalid out type");
 
+            // Member properties of the source type.
             var mappableInProperties = inTypeSymbol.GetMembers()
                 .OfType<IPropertySymbol>()
                 .Where(p => p.GetMethod is not null);
 
+            // Member properties of the target type.
             var mappableOutProperties = outTypeSymbol.GetMembers()
                 .OfType<IPropertySymbol>()
                 .Where(p => p.SetMethod is not null);
 
+            // The member properties which can be mapped based on their name. In this implementation,
+            // non-matching properties would have to be mapped manually using the optional delegate parameter.
             (string, string)[] mappableProperties = mappableInProperties
                 .Join(
                     mappableOutProperties,
@@ -125,6 +146,3 @@ public class MapperGenerator : ISourceGenerator
         }
     }
 }
-
-internal record MapDetails(string InTypeNamespace, string InTypeName, string OutTypeName, string OutTypeDisplay, (string InProp, string OutProp)[] MappableProperties);
-

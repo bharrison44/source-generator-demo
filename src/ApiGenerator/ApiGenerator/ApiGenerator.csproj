@@ -1,0 +1,56 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<!--Must be .NET Standard 2.0. Other targets/newer versions do not work.-->
+		<TargetFramework>netstandard2.0</TargetFramework>
+		<LangVersion>10.0</LangVersion>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+
+		<!--Adds DebugNull configuration to faciliate debugging.-->
+		<Configurations>Debug;Release;DebugGen</Configurations>
+
+		<!--For NuGet package generation-->
+		<PackageVersion>0.1.0</PackageVersion>
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+		<NoPackageAnalysis>true</NoPackageAnalysis>
+		<IncludeBuildOutput>false</IncludeBuildOutput>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!--Also for NuGet package generation, ensures package generated as an analyzer package.-->
+		<None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!--Requried generator references. Currently recommended versions. Newer versions may contain bugs.-->
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.0.1" PrivateAssets="all" />
+		<PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.3" PrivateAssets="all" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!--Nuget packages used by the generator need to have PrivateAssets and GeneratePathProperty attributes added-->
+		<PackageReference Include="Newtonsoft.Json" Version="12.0.1" PrivateAssets="all" GeneratePathProperty="true" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!--Also for NuGet package generation. Ensures package generated as an analyzer package.-->
+		<None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+		
+		<!--Required for each dependant NuGet package. Ensures package is correctly included in the analyzer package.-->
+		<None Include="$(PKGNewtonsoft_Json)\lib\netstandard2.0\Newtonsoft.Json.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+	</ItemGroup>
+	
+	<PropertyGroup>
+		<!--Required, if NuGet packages are used, for this generator library to be used as a project reference.-->
+		<GetTargetPathDependsOn>$(GetTargetPathDependsOn);GetDependencyTargetPaths</GetTargetPathDependsOn>
+	</PropertyGroup>
+
+	<Target Name="GetDependencyTargetPaths">
+		<ItemGroup>
+			<!--Required to be added for each NuGet dependency, if this generator is to be used a project reference.-->
+			<TargetPathWithTargetPlatformMoniker Include="$(PKGNewtonsoft_Json)\lib\netstandard2.0\Newtonsoft.Json.dll" IncludeRuntimeDependency="false" />
+		</ItemGroup>
+	</Target>
+
+</Project>
