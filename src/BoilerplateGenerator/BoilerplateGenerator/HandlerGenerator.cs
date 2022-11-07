@@ -9,28 +9,33 @@ using System.Diagnostics;
 
 namespace BoilerplateGenerator;
 
+/// <summary>
+/// Generator which extends a partial class with boilerplate to handle any number of parameters.
+/// </summary>
 [Generator]
 public class HandlerGenerator : ISourceGenerator
 {
+    /// <inheritdoc />
     public void Initialize(GeneratorInitializationContext context)
     {
 #if DEBUGGEN
         if (!Debugger.IsAttached) { Debugger.Launch(); }
 #endif
 
-        context.RegisterForSyntaxNotifications(() => new HandlerClassRetciever());
+        context.RegisterForSyntaxNotifications(() => new HandlerClassReceiver());
     }
 
+    /// <inheritdoc />
     public void Execute(GeneratorExecutionContext context)
     {
-        var syntaxReciever = context.SyntaxReceiver as HandlerClassRetciever;
+        var syntaxReceiver = context.SyntaxReceiver as HandlerClassReceiver;
 
-        if (syntaxReciever is null)
-            throw new Exception("Null syntax reciever");
+        if (syntaxReceiver is null)
+            throw new Exception("Null syntax receiver");
 
         SemanticModel? semanticModel = null;
 
-        foreach (ClassDeclarationSyntax handlerClassDeclaration in syntaxReciever.HandlerClasses)
+        foreach (ClassDeclarationSyntax handlerClassDeclaration in syntaxReceiver.HandlerClasses)
         {
             semanticModel ??= context.Compilation.GetSemanticModel(handlerClassDeclaration.SyntaxTree);
 

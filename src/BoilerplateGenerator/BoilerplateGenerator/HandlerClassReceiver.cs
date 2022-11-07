@@ -7,7 +7,7 @@ using System.Diagnostics;
 
 namespace BoilerplateGenerator;
 
-public class HandlerClassRetciever : ISyntaxReceiver
+public class HandlerClassReceiver : ISyntaxReceiver
 {
     public IList<ClassDeclarationSyntax> HandlerClasses = new List<ClassDeclarationSyntax>();
 
@@ -29,5 +29,3 @@ public class HandlerClassRetciever : ISyntaxReceiver
         }
     }
 }
-
-

@@ -29,10 +29,10 @@ public class MapperGenerator : ISourceGenerator
     /// <inheritdoc />
     public void Execute(GeneratorExecutionContext context)
     {
-        var syntaxReciever = context.SyntaxReceiver as MappingReceiver;
+        var syntaxReceiver = context.SyntaxReceiver as MappingReceiver;
         
-        if (syntaxReciever is null)
-            throw new Exception("Null syntax reciever");
+        if (syntaxReceiver is null)
+            throw new Exception("Null syntax receiver");
 
         var builder = new StringBuilder();
 
@@ -46,10 +46,10 @@ public class MapperGenerator : ISourceGenerator
         builder.AppendLine("}");
         builder.AppendLine();
 
-        if (syntaxReciever.Registrations.Any())
+        if (syntaxReceiver.Registrations.Any())
         {
             // Collect details needed from calls to Mappings.Register
-            IEnumerable<IGrouping<string, MapDetails>> groupedDetails = GetMapDetails(context, syntaxReciever.Registrations).GroupBy(dets => dets.InTypeNamespace);
+            IEnumerable<IGrouping<string, MapDetails>> groupedDetails = GetMapDetails(context, syntaxReceiver.Registrations).GroupBy(dets => dets.InTypeNamespace);
 
             foreach (IGrouping<string, MapDetails> detailsByNamespace in groupedDetails)
             {

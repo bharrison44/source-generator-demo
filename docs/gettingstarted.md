@@ -30,6 +30,41 @@ context.AddSource($"FileName.cs", SourceText.From(generatedCodeString, Encoding.
 
 Also recommended, add the configuration described in [Debugging](./debugging.md).
 
+## Syntax Receiver (optional)
+
+A syntax receiver is the mechanism used to inspect and collect the syntax nodes assembled by the compiler for use in the source generator. To create a syntax receiver, create a new class and implement the `Microsoft.CodeAnalysis.ISyntaxReceiver` interface, and add a public variable to contain the syntax nodes selected by the receiver. In the `OnVisitSyntaxNode` method, inspect the `syntaxNode` provided to determine if it may be of interest to the generator, and if so, assign or add it to the public variable. For example, a syntax receiver that collects syntax nodes for any declaration of an enum:
+
+```c#
+public class AnyEnumReceiver : ISyntaxReceiver
+{
+    public IList<EnumDeclarationSyntax> EnumDeclarations = new List<EnumDeclarationSyntax>();
+
+    public void OnVisitSyntaxNode(SyntaxNode syntaxNode)
+    {
+        if (syntaxNode is EnumDeclarationSyntax enumDeclaration)
+        {
+            EnumDeclarations.Add(enumDeclaration);
+        }
+    }
+}
+```
+
+To use a syntax receiver in a source generator, register it on the `context` with `RegisterForSyntaxNotifications`, and access it via `context.SyntaxReceiver` in the `Execute` method.
+
+```c#
+public void Initialize(GeneratorInitializationContext context)
+{
+    // ...
+    context.RegisterForSyntaxNotifications(() => new AnyEnumReceiver());
+}
+
+public void Execute(GeneratorExecutionContext context)
+{
+    var syntaxReceiver = context.SyntaxReceiver as AnyEnumReceiver;
+    // ...
+}
+```
+
 ## Entrypoint Project
 
 Create a simple entry point project for testing and debugging the source generator during development. A command line application is the recommended option if the generator is not specific to another application type.
