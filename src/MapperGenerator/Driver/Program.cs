@@ -20,7 +20,7 @@ public record Thing
 {
     public string Name { get; set; }
 
-    public int? Size { get; set; }
+    public int Size { get; set; }
 
     public bool Enabled { get; set; }
 }
